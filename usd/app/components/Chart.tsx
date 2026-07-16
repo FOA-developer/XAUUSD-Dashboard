@@ -44,7 +44,7 @@ export default function Chart() {
       const rawData = await response.json();
 
       const formatted : Candle[ ] = rawData.map((item: any) => ({
-        time: item.datetime,
+        time: Math.floor(new Date(item.datetime).getTime() / 1000),
         open: Number(item.open),
         high: Number(item.high),
         low: Number(item.low),
