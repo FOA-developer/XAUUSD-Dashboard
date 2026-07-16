@@ -79,7 +79,12 @@ export default function Chart() {
         <button onClick={() => setRange("1week")} className="px-3 py-1 border rounded">1 Week</button>
         <button onClick={() => setRange("4month")} className="px-3 py-1 border rounded">1 Month</button>
       </div>
-      {isLoading && <p>Loading gold data...</p>}
+      {isLoading && (
+        <div className="flex items-center gap-2 text-gray-600">
+        <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+        <span>Loading gold data...</span>
+        </div>
+      )}
       {error && <p className="text-red-600">Failed to load gold data.</p>}
       <div ref={chartContainerRef} />
     </div>
