@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef } from "react";
-import { createChart, CandlestickSeries } from "lightweight-charts";
+import { useEffect, useState, useRef } from "react";
+import { createChart, CandlestickSeries, IChartApi, ISeriesApi } from "lightweight-charts";
 
 interface Candle {
   time: string;
@@ -12,7 +12,10 @@ interface Candle {
 }
 
 export default function Chart() {
+  const [range, setRange] = useState("4month")
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
   useEffect(() => {
     if(!chartContainerRef.current) return;
@@ -23,8 +26,21 @@ export default function Chart() {
 
     const candleSeries = chart.addSeries(CandlestickSeries);
 
+    chartRef.current = chart;
+    seriesRef.current = candleSeries;
+
+    return ()  => {
+      chart.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+
     async function loadData() {
-      const response = await fetch("api/gold-data");
+      if(!seriesRef.current) return;
+
+
+      const response = await fetch(`api/gold-data?range=${range}`);
       const rawData = await response.json();
 
       const formatted : Candle[ ] = rawData.map((item: any) => ({
@@ -37,15 +53,21 @@ export default function Chart() {
 
       .reverse();
 
-      candleSeries.setData(formatted);
+      seriesRef.current.setData(formatted);
     }
 
     loadData();
 
-    return () => {
-      chart.remove();
-    };
-  }, []);
+  }, [range]);
 
-  return <div ref={chartContainerRef} />;
+  return (
+    <div>
+      <div className="flex gap-2 mb-2">
+        <button onClick={() => setRange("1day")} className="px-3 py-1 border rounded">1 Day</button>
+        <button onClick={() => setRange("1week")} className="px-3 py-1 border rounded">1 Week</button>
+        <button onClick={() => setRange("1month")} className="px-3 py-1 border rounded">1 Month</button>
+      </div>
+      <div ref={chartContainerRef} />
+    </div>
+  );
 }
