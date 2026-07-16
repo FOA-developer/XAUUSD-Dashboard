@@ -11,12 +11,14 @@ export async function GET( request: Request) {
   const range = searchParams.get( "range" ) || "4month";
 
   const rangeConfig: Record<string, { interval: string; outputsize: number}> = {
+    "15min": { interval: "1min", outputsize: 200 },
+    "1hour": { interval: "15min", outputsize: 200 },
     "1day": { interval: "5min", outputsize: 288 },
     "1week": { interval: "1h", outputsize: 168 },
-    "1month": { interval: "1day", outputsize: 30 },
+    "3months": { interval: "1day", outputsize: 90},
   }
 
-  const { interval, outputsize } = rangeConfig[range] ?? rangeConfig["1month"]; 
+  const { interval, outputsize } = rangeConfig[range] ?? rangeConfig["3months"]; 
 
 
   const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${interval}&outputsize=${outputsize}&apikey=${apiKey}`
