@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react";
-import { createChart, CandlestickSeries, IChartApi, ISeriesApi } from "lightweight-charts";
+import { createChart, LineSeries, CandlestickSeries, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
 import useSWR from "swr";
+import { calculateSMA } from "../lib/calculateSMA"
 
 interface Candle {
-  time: string;
+  time: UTCTimestamp;
   open: number;
   high: number;
   low: number;
@@ -16,9 +17,10 @@ async function fetcher(url: string): Promise<Candle[]> {
   const response = await fetch(url);
   const rawData = await response.json();
 
+  
   return rawData
     .map((item: any) => ({
-      time: Math.floor(new Date(item.datetime).getTime() / 1000),
+      time: Math.floor(new Date(item.datetime).getTime() / 1000) as UTCTimestamp,
       open: Number(item.open),
       high: Number(item.high),
       low: Number(item.low),
@@ -29,6 +31,7 @@ async function fetcher(url: string): Promise<Candle[]> {
 
 export default function Chart() {
   const [range, setRange] = useState("4month")
+  const smaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -40,13 +43,18 @@ export default function Chart() {
     if(!chartContainerRef.current) return;
     const chart = createChart(chartContainerRef.current, {
       width: 1000,
-      height: 400,
+      height: 500,
     });
 
     const candleSeries = chart.addSeries(CandlestickSeries);
+    const smaSeries = chart.addSeries(LineSeries, {
+      color: "blue",
+      lineWidth: 1,
+    })
 
     chartRef.current = chart;
     seriesRef.current = candleSeries;
+    smaSeriesRef.current = smaSeries;
 
     return ()  => {
       chart.remove();
@@ -54,8 +62,12 @@ export default function Chart() {
   }, []);
 
   useEffect(() => {
-    if (data && seriesRef.current) {
+    if (data && seriesRef.current && smaSeriesRef.current) {
       seriesRef.current.setData(data);
+
+      const smaData = calculateSMA(data, 20);
+      smaSeriesRef.current.setData(smaData);
+
     }
   }, [data]);
 
