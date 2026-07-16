@@ -1,5 +1,7 @@
+import { UTCTimestamp } from "lightweight-charts";
+
 interface Candle {
-  time: number;
+  time: UTCTimestamp;
   open: number;
   high: number;
   low: number;
@@ -7,7 +9,7 @@ interface Candle {
 }
 
 interface SMAPoint {
-  time: number;
+  time: UTCTimestamp;
   value: number;
 }
 
