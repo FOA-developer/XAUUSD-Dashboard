@@ -36,7 +36,7 @@ export default function Chart() {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
-  const { data, error, isLoading } = useSWR(`/api/gold-data?range=${range}`, fetcher);
+  const { data, error, isLoading } = useSWR(`/api/gold-data?range=${range}`, fetcher, { refreshInterval: 60000 });
 
 
   useEffect(() => {
