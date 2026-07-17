@@ -8,17 +8,18 @@ export async function GET( request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const range = searchParams.get( "range" ) || "4month";
+  const range = searchParams.get( "range" ) || "5min";
 
   const rangeConfig: Record<string, { interval: string; outputsize: number}> = {
-    "15min": { interval: "1min", outputsize: 15 },
-    "1hour": { interval: "15min", outputsize: 60 },
-    "1day": { interval: "5min", outputsize: 288 },
-    "1week": { interval: "1h", outputsize: 168 },
-    "4months": { interval: "1day", outputsize: 120},
+    "5min" : { interval:"5min", outputsize: 4000 },
+    "15min": { interval: "15min", outputsize: 4000 },
+    "1hour": { interval: "1hour", outputsize: 2880 },
+    "4hours": { interval: "4hours", outputsize: 720 },
+    "1day": { interval: "1day", outputsize: 120 },
+    "4months": { interval: "1day", outputsize: 120 },
   }
 
-  const { interval, outputsize } = rangeConfig[range] ?? rangeConfig["4months"]; 
+  const { interval, outputsize } = rangeConfig[range] ?? rangeConfig["5min"]; 
 
 
   const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${interval}&outputsize=${outputsize}&apikey=${apiKey}`
