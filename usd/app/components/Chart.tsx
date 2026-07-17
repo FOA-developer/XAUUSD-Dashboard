@@ -30,13 +30,13 @@ async function fetcher(url: string): Promise<Candle[]> {
 }
 
 export default function Chart() {
-  const [range, setRange] = useState("15min");
+  const [range, setRange] = useState("5min");
   const smaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
-  const { data, error, isLoading } = useSWR(`/api/gold-data?range=${range}`, fetcher, { refreshInterval: 60000 });
+  const { data, error, isLoading, isValidating} = useSWR(`/api/gold-data?range=${range}`, fetcher, { refreshInterval: 60000, keepPreviousData: true });
 
 
   useEffect(() => {
@@ -106,6 +106,16 @@ export default function Chart() {
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
+       <button
+          onClick={() => setRange("5min")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            range === "5min"
+              ? "bg-[#f5c451] text-[#2a2205]"
+              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+          }`}
+        >
+          5 minutes
+        </button>
         <button
           onClick={() => setRange("15min")}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
@@ -127,6 +137,16 @@ export default function Chart() {
           1 hour
         </button>
         <button
+          onClick={() => setRange("4hours")}
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            range === "4hours"
+              ? "bg-[#f5c451] text-[#2a2205]"
+              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+          }`}
+        >
+          4 hours
+        </button>
+        <button
           onClick={() => setRange("1day")}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
             range === "1day"
@@ -146,22 +166,15 @@ export default function Chart() {
         >
           1 Week
         </button>
-        <button
-          onClick={() => setRange("4month")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "4month"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          1 Month
-        </button>
       </div>
       {isLoading && (
         <div className="flex items-center gap-2 text-[#8b93a7]">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-[#f5c451]" />
           <span>Loading gold data...</span>
         </div>
+      )}
+      {isValidating && !isLoading && (
+        <div className="text-xs text-[#8b93a7]">Refreshing…</div>
       )}
       {error && <p className="text-[#f0616d]">Failed to load gold data.</p>}
       <div ref={chartContainerRef} className="min-h-0 flex-1 overflow-hidden rounded-xl" />
