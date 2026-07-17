@@ -200,7 +200,6 @@ export default function Chart() {
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-white/5 bg-[#111827] p-4 shadow-2xl shadow-black/40 sm:p-6">
-      {/* Price header (visual only) */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
         <div className="flex items-center gap-3">
           <div>
