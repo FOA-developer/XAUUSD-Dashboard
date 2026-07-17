@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react";
-import { createChart, LineSeries, CandlestickSeries, IChartApi, ISeriesApi, UTCTimestamp } from "lightweight-charts";
+import { createChart, LineSeries, CandlestickSeries, IChartApi, ISeriesApi, UTCTimestamp, CandlestickData, LineData } from "lightweight-charts";
 import useSWR from "swr";
 import { calculateSMA } from "../lib/calculateSMA"
+import OhlcReadout, { Readout } from "./OhlcReadout"
 
 interface Candle {
   time: UTCTimestamp;
@@ -35,6 +36,23 @@ export default function Chart() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+
+  // Live crosshair / candle readout shared with the header.
+  const [readout, setReadout] = useState<Readout>({
+    open: null,
+    high: null,
+    low: null,
+    sma: null,
+  });
+
+  // Latest candle + SMA, used as the default and the hover-off fallback.
+  const defaultReadoutRef = useRef<Readout>({ open: null, high: null, low: null, sma: null });
+  // SMA lookup keyed by candle time (for reverting/initial state).
+  const smaByTimeRef = useRef<Map<number, number>>(new Map());
+  // Throttling + touch-retain timers for the crosshair handler.
+  const lastMoveRef = useRef(0);
+  const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, error, isLoading, isValidating} = useSWR(`/api/gold-data?range=${range}`, fetcher, { refreshInterval: 60000, keepPreviousData: true });
 
@@ -82,7 +100,95 @@ export default function Chart() {
       const smaData = calculateSMA(data, 20);
       smaSeriesRef.current.setData(smaData);
 
+      // Build a time -> SMA lookup for revert/initial defaults.
+      const smaMap = new Map<number, number>();
+      for (const point of smaData) {
+        smaMap.set(point.time as number, point.value);
+      }
+      smaByTimeRef.current = smaMap;
+
+      // Default to the latest candle before any hover.
+      const latest = data[data.length - 1];
+      if (latest) {
+        const next: Readout = {
+          open: latest.open,
+          high: latest.high,
+          low: latest.low,
+          sma: smaMap.get(latest.time as number) ?? null,
+        };
+        defaultReadoutRef.current = next;
+        // Only reset the visible readout to latest when not actively hovering.
+        if (retainTimerRef.current == null) setReadout(next);
+      }
     }
+  }, [data]);
+
+  // Crosshair subscription: throttled hover readout with touch-retain.
+  useEffect(() => {
+    const chart = chartRef.current;
+    const candleSeries = seriesRef.current;
+    const smaSeries = smaSeriesRef.current;
+    if (!chart || !candleSeries || !smaSeries) return;
+
+    const applyMove = (param: Parameters<Parameters<IChartApi["subscribeCrosshairMove"]>[0]>[0]) => {
+      // Cursor left the chart area: briefly retain, then revert to latest.
+      if (param.time == null || param.point == null) {
+        if (retainTimerRef.current) clearTimeout(retainTimerRef.current);
+        retainTimerRef.current = setTimeout(() => {
+          retainTimerRef.current = null;
+          setReadout(defaultReadoutRef.current);
+        }, 700);
+        return;
+      }
+
+      if (retainTimerRef.current) {
+        clearTimeout(retainTimerRef.current);
+        retainTimerRef.current = null;
+      }
+
+      const candle = param.seriesData.get(candleSeries) as CandlestickData | undefined;
+      const smaPoint = param.seriesData.get(smaSeries) as LineData | undefined;
+      const smaValue =
+        smaPoint?.value ?? smaByTimeRef.current.get(param.time as number) ?? null;
+
+      if (candle) {
+        setReadout({
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          sma: smaValue,
+        });
+      }
+    };
+
+    const handler = (param: Parameters<typeof applyMove>[0]) => {
+      const now = Date.now();
+      const elapsed = now - lastMoveRef.current;
+      // Let hover-off (revert) run immediately; throttle active moves.
+      if (param.time == null || elapsed >= 50) {
+        lastMoveRef.current = now;
+        if (throttleTimerRef.current) {
+          clearTimeout(throttleTimerRef.current);
+          throttleTimerRef.current = null;
+        }
+        applyMove(param);
+      } else {
+        // Ensure the trailing move is not dropped.
+        if (throttleTimerRef.current) clearTimeout(throttleTimerRef.current);
+        throttleTimerRef.current = setTimeout(() => {
+          lastMoveRef.current = Date.now();
+          throttleTimerRef.current = null;
+          applyMove(param);
+        }, 50 - elapsed);
+      }
+    };
+
+    chart.subscribeCrosshairMove(handler);
+    return () => {
+      chart.unsubscribeCrosshairMove(handler);
+      if (throttleTimerRef.current) clearTimeout(throttleTimerRef.current);
+      if (retainTimerRef.current) clearTimeout(retainTimerRef.current);
+    };
   }, [data]);
 
 
@@ -105,68 +211,75 @@ export default function Chart() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-       <button
-          onClick={() => setRange("5min")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "5min"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          5 minutes
-        </button>
+      <div className="flex justify-between flex-row-reverse items-center">
+        <div className="mb-4 border-t border-white/5 pt-3 sm:mb-6">
+          <OhlcReadout {...readout} />
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-2">
         <button
-          onClick={() => setRange("15min")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "15min"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          15 minutes
-        </button>
-        <button
-          onClick={() => setRange("1hour")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "1hour"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          1 hour
-        </button>
-        <button
-          onClick={() => setRange("4hours")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "4hours"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          4 hours
-        </button>
-        <button
-          onClick={() => setRange("1day")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "1day"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          1 Day
-        </button>
-        <button
-          onClick={() => setRange("1week")}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            range === "1week"
-              ? "bg-[#f5c451] text-[#2a2205]"
-              : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-          }`}
-        >
-          1 Week
-        </button>
+            onClick={() => setRange("5min")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              range === "5min"
+                ? "bg-[#f5c451] text-[#2a2205]"
+                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+            }`}
+          >
+            5 minutes
+          </button>
+          <button
+            onClick={() => setRange("15min")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              range === "15min"
+                ? "bg-[#f5c451] text-[#2a2205]"
+                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+            }`}
+          >
+            15 minutes
+          </button>
+          <button
+            onClick={() => setRange("1hour")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              range === "1hour"
+                ? "bg-[#f5c451] text-[#2a2205]"
+                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+            }`}
+          >
+            1 hour
+          </button>
+          <button
+            onClick={() => setRange("4hours")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              range === "4hours"
+                ? "bg-[#f5c451] text-[#2a2205]"
+                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+            }`}
+          >
+            4 hours
+          </button>
+          <button
+            onClick={() => setRange("1day")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              range === "1day"
+                ? "bg-[#f5c451] text-[#2a2205]"
+                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+            }`}
+          >
+            1 Day
+          </button>
+          <button
+            onClick={() => setRange("1week")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              range === "1week"
+                ? "bg-[#f5c451] text-[#2a2205]"
+                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+            }`}
+          >
+            1 Week
+          </button>
+        </div>
       </div>
+      
       {isLoading && (
         <div className="flex items-center gap-2 text-[#8b93a7]">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-[#f5c451]" />
