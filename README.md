@@ -54,6 +54,8 @@ SWR keys on `/api/gold-data?range=...`, so each timeframe caches independently, 
 TWELVE_DATA_API_KEY=your_key_here
 ```
 
+AI was used in creating design 
+
 Set in `.env.local` (gitignored) locally, and in Vercel's project settings for deployment.
 
 ## Running Locally
