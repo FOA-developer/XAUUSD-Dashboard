@@ -24,11 +24,11 @@ A web dashboard for gold (XAU/USD) price data, candlestick chart, timeframe swit
 
 ## Why Twelve Data
 
-I looked at Polygon.io, Alpha Vantage, and Finnhub first. Polygon has no free tier, so that was quick. Alpha Vantage caps out at 25 requests/day — you'll burn through that in minutes of actual use. Finnhub's rate limit is generous (60/min) but its metals coverage is thin to nonexistent on the free tier. Twelve Data treats forex/commodities as first-class data, gives 800 calls/day and 8/min free, and I confirmed in the browser before writing any code that it actually returns proper gold OHLC data. Gold coverage was the deciding factor.
+I looked at Polygon.io, Alpha Vantage, and Finnhub first. Polygon has no free tier, so that was quick. Alpha Vantage caps out at 25 requests/day,  you'll burn through that in minutes of actual use. Finnhub's rate limit is generous (60/min) but its metals coverage is thin to nonexistent on the free tier. Twelve Data treats forex/commodities as first-class data, gives 800 calls/day and 8/min free, and I confirmed in the browser before writing any code that it actually returns proper gold OHLC data. Gold coverage was the deciding factor.
 
 ## Why SMA
 
-It's the simplest indicator to implement correctly and explain to someone else — a rolling average of the last N closes. One quirk worth knowing: the first N-1 candles on any chart won't have an SMA value yet, since there's no history to average. That's just how moving averages work, not a bug, and you'll see it as a small gap at the start of the SMA line on longer timeframes.
+It's the simplest indicator to implement correctly and explain to someone else, a rolling average of the last N closes. One quirk worth knowing: the first N-1 candles on any chart won't have an SMA value yet, since there's no history to average. That's just how moving averages work, not a bug, and you'll see it as a small gap at the start of the SMA line on longer timeframes.
 
 ## Error Handling
 
@@ -40,12 +40,12 @@ I tested three failure modes on purpose.
 
 ## Caching
 
-SWR keys on `/api/gold-data?range=...`, so each timeframe caches independently — revisit one you've already fetched this session and it's instant, no network call. `keepPreviousData: true` stops the chart from going blank while a new timeframe loads. This isn't just nice UX either — Twelve Data's free tier caps at 8 requests/min, and re-fetching on every click would hit that fast.
+SWR keys on `/api/gold-data?range=...`, so each timeframe caches independently, revisit one you've already fetched this session and it's instant, no network call. `keepPreviousData: true` stops the chart from going blank while a new timeframe loads. This isn't just nice UX either — Twelve Data's free tier caps at 8 requests/min, and re-fetching on every click would hit that fast.
 
 ## Known Limitations
 
 - **Real-time streaming**: Twelve Data's WebSocket access is paid-tier only. 60-second polling is the workaround for now.
-- **Weekend gaps**: forex/commodity markets close on weekends, so you'll see flat or sparse candles then — that's the market, not a bug.
+- **Weekend gaps**: forex/commodity markets close on weekends, so you'll see flat or sparse candles then, that's the market, not a bug.
 - With more time: a second indicator (RSI or Bollinger Bands), and real WebSocket streaming on a paid plan.
 
 ## Environment Variables
