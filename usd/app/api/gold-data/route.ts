@@ -13,8 +13,8 @@ export async function GET( request: Request) {
   const rangeConfig: Record<string, { interval: string; outputsize: number}> = {
     "5min" : { interval:"5min", outputsize: 4000 },
     "15min": { interval: "15min", outputsize: 4000 },
-    "1hour": { interval: "1hour", outputsize: 2880 },
-    "4hours": { interval: "4hours", outputsize: 720 },
+    "1hour": { interval: "1h", outputsize: 2880 },
+    "4hours": { interval: "4h", outputsize: 720 },
     "1day": { interval: "1day", outputsize: 120 },
     "4months": { interval: "1day", outputsize: 120 },
   }
