@@ -69,6 +69,10 @@ export default function Chart() {
         vertLines: { color: "rgba(255,255,255,0.05)" },
         horzLines: { color: "rgba(255,255,255,0.05)" },
       },
+      timeScale: {
+        timeVisible: true,
+        secondsVisible: false,
+      },
     });
 
     const candleSeries = chart.addSeries(CandlestickSeries, {
