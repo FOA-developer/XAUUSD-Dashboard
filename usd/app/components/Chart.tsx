@@ -267,16 +267,6 @@ export default function Chart() {
           >
             1 Day
           </button>
-          <button
-            onClick={() => setRange("1week")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              range === "1week"
-                ? "bg-[#f5c451] text-[#2a2205]"
-                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-            }`}
-          >
-            1 Week
-          </button>
         </div>
       </div>
       
