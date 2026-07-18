@@ -15,7 +15,7 @@ A web dashboard for gold (XAU/USD) price data, candlestick chart, timeframe swit
 ## Features
 
 - Candlestick chart with five timeframes
-- 20-period SMA plotted as an overlay line.
+- SMA plotted as an overlay line.
 - SWR caching keyed on the request URL.
 - 60-second polling refresh so prices update without a page reload. 
 - A price header pulling the latest close straight from the polled data.
