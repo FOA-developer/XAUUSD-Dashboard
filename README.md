@@ -6,7 +6,7 @@ A web dashboard for gold (XAU/USD) price data, candlestick chart, timeframe swit
 
 ## Tech Stack
 
-- **Next.js (App Router) + TypeScript** — API routes so the Twelve Data key stays server-side, never exposed to the browser.
+- **Next.js (App Router) + TypeScript**:  API routes so the Twelve Data key stays server-side, never exposed to the browser.
 - **Twelve Data API (free tier)** for OHLC gold data.
 - **lightweight-charts** (TradingView's library) for the candlesticks and SMA line.
 - **SWR** for caching, loading, and error states.
@@ -15,7 +15,7 @@ A web dashboard for gold (XAU/USD) price data, candlestick chart, timeframe swit
 
 ## Features
 
-- Candlestick chart with five timeframes — 15m, 1H, 4H, 1D, each showing the past N periods up to now, same convention as TradingView: switching timeframes changes both the candle resolution and how far back you're looking, always ending at the current moment.
+- Candlestick chart with five timeframes: 15m, 1H, 4H, 1D, each showing the past N periods up to now, same convention as TradingView: switching timeframes changes both the candle resolution and how far back you're looking, always ending at the current moment.
 - 20-period SMA plotted as an overlay line.
 - Loading and error states. The app shouldn't crash on a bad key, dead network, or empty response.
 - SWR caching keyed on the request URL, so flipping back to a timeframe you already loaded this session is instant. `keepPreviousData` keeps the old chart on screen while a new timeframe loads instead of flashing blank.
@@ -34,9 +34,9 @@ It's the simplest indicator to implement correctly and explain to someone else, 
 
 I tested three failure modes on purpose.
 
-1. **Bad API key** — swapped in a garbage value in `.env.local`. Twelve Data comes back with `status: "error"`, the API route turns that into a 502, and the frontend shows "Failed to load gold data." instead of crashing.
-2. **Empty/malformed data** — checked the code paths: the SMA loop just doesn't run on an empty array, and `setData([])` renders a blank chart with no exception.
-3. **Network failure** — killed the connection with Chrome DevTools' offline mode. `fetch` fails, SWR catches it as an error, same message shows up instead of a spinner hanging forever.
+1. **Bad API key**:  swapped in a garbage value in `.env.local`. Twelve Data comes back with `status: "error"`, the API route turns that into a 502, and the frontend shows "Failed to load gold data." instead of crashing.
+2. **Empty/malformed data**: checked the code paths: the SMA loop just doesn't run on an empty array, and `setData([])` renders a blank chart with no exception.
+3. **Network failure**: killed the connection with Chrome DevTools' offline mode. `fetch` fails, SWR catches it as an error, same message shows up instead of a spinner hanging forever.
 
 ## Caching
 
