@@ -28,14 +28,6 @@ I looked at Polygon.io, Alpha Vantage, and Finnhub first. Polygon has no free ti
 
 It's the simplest indicator to implement correctly and explain to someone else, a rolling average of the last N closes. One quirk worth knowing: the first N-1 candles on any chart won't have an SMA value yet, since there's no history to average. That's just how moving averages work, not a bug, and you'll see it as a small gap at the start of the SMA line on longer timeframes.
 
-## Error Handling
-
-I tested three failure modes on purpose.
-
-1. **Bad API key**:  swapped in a garbage value in `.env.local`. Twelve Data comes back with `status: "error"`, the API route turns that into a 502, and the frontend shows "Failed to load gold data." instead of crashing.
-2. **Empty/malformed data**: checked the code paths: the SMA loop just doesn't run on an empty array, and `setData([])` renders a blank chart with no exception.
-3. **Network failure**: killed the connection with Chrome DevTools' offline mode. `fetch` fails, SWR catches it as an error, same message shows up instead of a spinner hanging forever.
-
 ## Caching
 
 SWR keys on `/api/gold-data?range=...`, so each timeframe caches independently, revisit one you've already fetched this session and it's instant, no network call. `keepPreviousData: true` stops the chart from going blank while a new timeframe loads. This isn't just nice UX either — Twelve Data's free tier caps at 8 requests/min, and re-fetching on every click would hit that fast.
