@@ -24,7 +24,7 @@ function ValueGroup({ label, value, colorClass }: ValueGroupProps) {
         {label}
       </span>
       <span
-        className={`font-mono text-base font-bold tabular-nums sm:text-lg ${colorClass}`}
+        className={`font-mono text-sm font-bold tabular-nums sm:text-lg ${colorClass}`}
       >
         {value}
       </span>
@@ -34,7 +34,7 @@ function ValueGroup({ label, value, colorClass }: ValueGroupProps) {
 
 export default function OhlcReadout({ open, high, low, sma }: Readout) {
   return (
-    <div className="flex flex-wrap items-start justify-center gap-x-6 gap-y-2 sm:justify-end sm:gap-x-8">
+    <div className="flex flex-nowrap items-start justify-end gap-x-3 whitespace-nowrap sm:gap-x-8">
       <ValueGroup label="Open" value={format(open)} colorClass="text-[#e6e9ef]" />
       <ValueGroup label="High" value={format(high)} colorClass="text-[#26c281]" />
       <ValueGroup label="Low" value={format(low)} colorClass="text-[#f0616d]" />
