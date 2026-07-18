@@ -42,17 +42,30 @@ export default function Chart() {
     open: null,
     high: null,
     low: null,
-    sma: null,
+    close: null,
   });
 
-  // Latest candle + SMA, used as the default and the hover-off fallback.
-  const defaultReadoutRef = useRef<Readout>({ open: null, high: null, low: null, sma: null });
+   
+  const defaultReadoutRef = useRef<Readout>({ open: null, high: null, low: null, close: null });
   // SMA lookup keyed by candle time (for reverting/initial state).
   const smaByTimeRef = useRef<Map<number, number>>(new Map());
   // Throttling + touch-retain timers for the crosshair handler.
   const lastMoveRef = useRef(0);
   const throttleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Timeframe buttons: fixed set, paged one-at-a-time by the arrows.
+  const timeframes = [
+    { value: "5min", label: "5 min" },
+    { value: "15min", label: "15 min" },
+    { value: "1hour", label: "1h" },
+    { value: "4hours", label: "4h" },
+    { value: "1day", label: "1d" },
+  ];
+  // Which button occupies the first (always-visible) slot. Arrows rotate this.
+  const [tfOffset, setTfOffset] = useState(0);
+  const pageTimeframes = (dir: number) => {
+    setTfOffset((prev) => (prev + dir + timeframes.length) % timeframes.length);
+  };
 
   const { data, error, isLoading, isValidating} = useSWR(`/api/gold-data?range=${range}`, fetcher, { refreshInterval: 60000, keepPreviousData: true });
 
@@ -118,7 +131,7 @@ export default function Chart() {
           open: latest.open,
           high: latest.high,
           low: latest.low,
-          sma: smaMap.get(latest.time as number) ?? null,
+          close: latest.close,
         };
         defaultReadoutRef.current = next;
         // Only reset the visible readout to latest when not actively hovering.
@@ -160,7 +173,7 @@ export default function Chart() {
           open: candle.open,
           high: candle.high,
           low: candle.low,
-          sma: smaValue,
+          close: candle.close,
         });
       }
     };
@@ -198,6 +211,14 @@ export default function Chart() {
 
   const latestPrice = data?.[data.length - 1]?.close;
 
+  // Rotate the list so `tfOffset` sits first; CSS reveals as many as width allows.
+  const orderedTimeframes = [
+    ...timeframes.slice(tfOffset),
+    ...timeframes.slice(0, tfOffset),
+  ];
+  // Reveal by position: 1 (≤850) · 2 (≥851) · 3 (lg≥1024) · 4 (xl≥1280) · 5 (2xl≥1536)
+  const revealByPosition = ["", "hidden min-[851px]:block", "hidden lg:block", "hidden xl:block", "hidden 2xl:block"];
+
   return (
     <div className="flex h-full flex-col rounded-2xl border border-white/5 bg-[#111827] p-4 shadow-2xl shadow-black/40 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
@@ -207,69 +228,51 @@ export default function Chart() {
             <div className="text-[10px] uppercase tracking-widest text-[#8b93a7] sm:text-xs">Gold Spot</div>
           </div>
         </div>
-        <div className="font-mono text-2xl font-semibold text-[#e6e9ef] sm:text-4xl">
+        <div className="font-mono text-xl font-semibold text-[#e6e9ef] sm:text-3xl">
           {latestPrice != null
             ? `$${latestPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             : "—"}
         </div>
       </div>
 
-      <div className="flex justify-between flex-row-reverse items-center">
-        <div className="mb-4 border-t border-white/5 pt-3 sm:mb-6">
-          <OhlcReadout {...readout} />
+      <div className="mb-4 flex items-center gap-3 sm:mb-6">
+        <div className="flex min-w-0 shrink items-center gap-1">
+          <button
+            type="button"
+            aria-label="Previous timeframe"
+            onClick={() => pageTimeframes(-1)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-lg leading-none text-[#8b93a7] transition hover:bg-white/10 max-[400px]:h-6 max-[400px]:w-6 max-[400px]:text-sm 2xl:hidden"
+          >
+            ‹
+          </button>
+          <div className="flex gap-2">
+            {orderedTimeframes.map((tf, i) => (
+              <button
+                key={tf.value}
+                onClick={() => setRange(tf.value)}
+                className={`${revealByPosition[i]} shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition max-[400px]:px-2.5 max-[400px]:py-1 max-[400px]:text-[11px] ${
+                  range === tf.value
+                    ? "bg-[#f5c451] text-[#2a2205]"
+                    : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
+                }`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            aria-label="Next timeframe"
+            onClick={() => pageTimeframes(1)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-lg leading-none text-[#8b93a7] transition hover:bg-white/10 max-[400px]:h-6 max-[400px]:w-6 max-[400px]:text-sm 2xl:hidden"
+          >
+            ›
+          </button>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
-        <button
-            onClick={() => setRange("5min")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              range === "5min"
-                ? "bg-[#f5c451] text-[#2a2205]"
-                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-            }`}
-          >
-            5 minutes
-          </button>
-          <button
-            onClick={() => setRange("15min")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              range === "15min"
-                ? "bg-[#f5c451] text-[#2a2205]"
-                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-            }`}
-          >
-            15 minutes
-          </button>
-          <button
-            onClick={() => setRange("1hour")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              range === "1hour"
-                ? "bg-[#f5c451] text-[#2a2205]"
-                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-            }`}
-          >
-            1 hour
-          </button>
-          <button
-            onClick={() => setRange("4hours")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              range === "4hours"
-                ? "bg-[#f5c451] text-[#2a2205]"
-                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-            }`}
-          >
-            4 hours
-          </button>
-          <button
-            onClick={() => setRange("1day")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              range === "1day"
-                ? "bg-[#f5c451] text-[#2a2205]"
-                : "bg-white/5 text-[#8b93a7] hover:bg-white/10"
-            }`}
-          >
-            1 Day
-          </button>
+        {/* OHLC + SMA readout: always one row, expands into space the buttons free up */}
+        <div className="min-w-0 flex-1 border-t border-white/5 pt-3">
+          <OhlcReadout {...readout} />
         </div>
       </div>
       
